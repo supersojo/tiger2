@@ -2,6 +2,7 @@
 
 #include "parser.h"
 #include "symtable.h"
+#include "ir.h"
 
 namespace tiger{
 
@@ -21,7 +22,16 @@ Parser::Parser(scanner::SourceCodeStreamBase* stream)
     
     m_temp = new TempTable;
     
+    /* const table */
     m_const_num = new ConstTableNum;
+    
+    /* label table */
+    Label::Init("L",32);
+    
+    m_label = new LabelTable;
+    
+    m_ir = new IR(this);
+    
 }
 s32 Parser::Parse()
 {
@@ -41,8 +51,16 @@ s32 Parser::Parse()
     v = m_scanner->Next(&t);
     assert(v==kToken_EOT);
     
+    /**
     std::cout<<m_temp->Size()<<std::endl;
     m_temp->Dump();
+    
+    dynamic_cast<ConstTableNum*>(m_const_num)->Dump();
+    
+    m_stack->Top()->Dump();
+    **/
+    m_ir->Dump(this);
+    
     return 0;
 }
 Statement* Parser::_ParseStatement()
@@ -58,7 +76,7 @@ Statement* Parser::_ParseStatement()
     
     /* Statement->StatementAssign */
     if(v==kToken_ID){
-        std::cout<<"id:"<<t.u.name<<std::endl;
+        //std::cout<<"id:"<<t.u.name<<std::endl;
         SymTabStackIter iter(m_stack);
         for(tab=iter.Next();tab;tab=iter.Next())
         {
@@ -68,18 +86,22 @@ Statement* Parser::_ParseStatement()
         }
         /* new symbol */
         if(tab){
-            std::cout<<t.u.name<<" already exist"<<std::endl;
+            ;//std::cout<<t.u.name<<" already exist"<<std::endl;
         }else{
-            std::cout<<"new symbol "<<t.u.name<<std::endl;
             m_stack->Top()->Insert(t.u.name);
             m_stack->Top()->Find(t.u.name,&sym);
         }
         
         v1 = m_scanner->Next(&t1);
+        
         assert(v1==kToken_ASSIGN);
+        
         expr = _ParseExpr();
-        std::cout<<"MOV "<<t.u.name<<","<<expr->GetTemp()->Id()<<std::endl;
-        std::cout<<"new assign statement"<<std::endl;
+        
+        m_ir->NewIREntry(IR::MOV,expr->GetTemp()->GetIdx(),0,sym->GetIdx(),IREntry::IREntry::kIREntry_Operand_Temp,0,IREntry::kIREntry_Operand_Sym,m_stack->TopNode());
+        
+        //std::cout<<"MOV "<<t.u.name<<","<<expr->GetTemp()->Id()<<std::endl;
+        //std::cout<<"new assign statement"<<std::endl;
         return new StatementAssign(t.u.name,expr);
     }
     
@@ -89,14 +111,21 @@ Statement* Parser::_ParseStatement()
         SymbolTable* tab = new SymbolTable;
         m_stack->Push(tab);
         
+        //std::cout<<"new symbol table!"<<std::endl;
+        
         statementList = _ParseStatementList();
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_RBRA);
         
+        /* dump the new symbol table */
+        //m_stack->Top()->Dump();
+        
         /* back to previous level */
         m_stack->Pop();
         
-        std::cout<<"new block statement"<<std::endl;
+        //std::cout<<"delete symbol table!"<<std::endl;
+        
+        //std::cout<<"new block statement"<<std::endl;
         return new StatementBlock(statementList);
     }
     
@@ -154,13 +183,16 @@ Expr* Parser::_ParseExpr()
     assert(m_temp->Find(temp->Id(),0)==1);
     
     //
-    m_stack->Top()->Insert(n->GetTemp()->Id());
-    m_stack->Top()->Find(n->GetTemp()->Id(),&sym);
+    //m_stack->Top()->Insert(n->GetTemp()->Id());
+    //m_stack->Top()->Find(n->GetTemp()->Id(),&sym);
     
-    if(!erest)
-        std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<term->GetTemp()->Id()<<std::endl;
-    else
-        std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<erest->GetTemp()->Id()<<std::endl;
+    if(!erest){
+        m_ir->NewIREntry(IR::MOV,term->GetTemp()->GetIdx(),0,n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,0,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+        //std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<term->GetTemp()->Id()<<std::endl;
+    }else{
+        m_ir->NewIREntry(IR::MOV,erest->GetTemp()->GetIdx(),0,n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,0,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+        //std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<erest->GetTemp()->Id()<<std::endl;
+    }
     return n;
 }
 Term* Parser::_ParseTerm()
@@ -187,10 +219,13 @@ Term* Parser::_ParseTerm()
     m_temp->Insert(temp);
     assert(m_temp->Find(temp->Id(),0)==1);
             
-    if(!trest)
-        std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<factor->GetTemp()->Id()<<std::endl;
-    else
-        std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<trest->GetTemp()->Id()<<std::endl;
+    if(!trest){
+        m_ir->NewIREntry(IR::MOV,factor->GetTemp()->GetIdx(),0,n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,0,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+        //std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<factor->GetTemp()->Id()<<std::endl;
+    }else{
+        m_ir->NewIREntry(IR::MOV,trest->GetTemp()->GetIdx(),0,n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,0,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+        //std::cout<<"MOV "<<n->GetTemp()->Id()<<","<<trest->GetTemp()->Id()<<std::endl;
+    }
     return n;
 }
 Erest* Parser::_ParseErest(Term* ter)
@@ -218,7 +253,8 @@ Erest* Parser::_ParseErest(Term* ter)
             m_temp->Insert(temp);
             assert(m_temp->Find(temp->Id(),0)==1);
             
-            std::cout<<"ADD "<<ter->GetTemp()->Id()<<","<<term->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
+            m_ir->NewIREntry(IR::ADD,ter->GetTemp()->GetIdx(),term->GetTemp()->GetIdx(),n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+            //std::cout<<"ADD "<<ter->GetTemp()->Id()<<","<<term->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
             return n;
         }
         if(v==kToken_SUB){
@@ -229,7 +265,9 @@ Erest* Parser::_ParseErest(Term* ter)
         
             m_temp->Insert(temp);
             assert(m_temp->Find(temp->Id(),0)==1);
-            std::cout<<"SUB "<<ter->GetTemp()->Id()<<","<<term->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
+            
+            m_ir->NewIREntry(IR::SUB,ter->GetTemp()->GetIdx(),term->GetTemp()->GetIdx(),n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+            //std::cout<<"SUB "<<ter->GetTemp()->Id()<<","<<term->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
             return n;
         }
     }
@@ -247,6 +285,10 @@ Factor* Parser::_ParseFactor()
     Expr* expr;
     Factor* factor;
     Temp* temp;
+    SymbolTable* tab;
+    Symbol* sym;
+    Const* c;
+    
     v = m_scanner->Next(&t);
     /* F->num */
     if(v==kToken_NUM){
@@ -261,11 +303,12 @@ Factor* Parser::_ParseFactor()
         assert(m_temp->Find(temp->Id(),0)==1);
         
         /* cosnt table */
-        assert(m_const_num->Find(t.u.ival,0)==0);
-        m_const_num->Insert(t.u.ival);
-        assert(m_const_num->Find(t.u.ival,0)==1);
+        dynamic_cast<ConstTableNum*>(m_const_num)->Insert(t.u.ival);
         
-        std::cout<<"MOV "<<factor->GetTemp()->Id()<<","<<t.u.ival<<std::endl;
+        dynamic_cast<ConstTableNum*>(m_const_num)->Find(t.u.ival,&c);
+        
+        m_ir->NewIREntry(IR::CONST,c->GetIdx(),0,factor->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Const,0,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+        //std::cout<<"MOV "<<factor->GetTemp()->Id()<<","<<t.u.ival<<std::endl;
         return factor;
     }
     /* F->id */
@@ -279,7 +322,25 @@ Factor* Parser::_ParseFactor()
         m_temp->Insert(temp);
         
         assert(m_temp->Find(temp->Id(),0)==1);
-        std::cout<<"MOV "<<factor->GetTemp()->Id()<<","<<t.u.name<<std::endl;
+        
+        /* check id is defined already? */
+        SymTabStackIter iter(m_stack);
+        for(tab=iter.Next();tab;tab=iter.Next())
+        {
+            if(tab->Find(t.u.name,&sym)){
+                break;
+            }
+        }
+        if(tab){
+            m_ir->NewIREntry(IR::MOV,sym->GetIdx(),0,factor->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Sym,0,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+            //std::cout<<"MOV "<<factor->GetTemp()->Id()<<","<<t.u.name<<std::endl;
+        }
+        else{
+            //std::cout<<"symbol "<<t.u.name<<" not found!"<<std::endl;
+            assert(0==1);
+            return 0;
+        }
+        
         return factor;
     }
     /* F->(E) */
@@ -304,7 +365,8 @@ Factor* Parser::_ParseFactor()
         m_temp->Insert(temp);
         assert(m_temp->Find(temp->Id(),0)==1);
         
-        std::cout<<"MOV "<<factor->GetTemp()->Id()<<","<<expr->GetTemp()->Id()<<std::endl;
+        m_ir->NewIREntry(IR::MOV,expr->GetTemp()->GetIdx(),0,factor->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,0,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+        //std::cout<<"MOV "<<factor->GetTemp()->Id()<<","<<expr->GetTemp()->Id()<<std::endl;
         return factor;
     }
     
@@ -336,7 +398,8 @@ Trest* Parser::_ParseTrest(Factor* f)
             m_temp->Insert(temp);
             assert(m_temp->Find(temp->Id(),0)==1);
             
-            std::cout<<"MUL "<<f->GetTemp()->Id()<<","<<factor->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
+            m_ir->NewIREntry(IR::MUL,f->GetTemp()->GetIdx(),factor->GetTemp()->GetIdx(),n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+            //std::cout<<"MUL "<<f->GetTemp()->Id()<<","<<factor->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
             return n;
         }
         if(v==kToken_DIV){
@@ -349,7 +412,8 @@ Trest* Parser::_ParseTrest(Factor* f)
             m_temp->Insert(temp);
             assert(m_temp->Find(temp->Id(),0)==1);
         
-            std::cout<<"DIV "<<f->GetTemp()->Id()<<","<<factor->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
+            m_ir->NewIREntry(IR::DIV,f->GetTemp()->GetIdx(),factor->GetTemp()->GetIdx(),n->GetTemp()->GetIdx(),IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Temp,m_stack->TopNode());
+            //std::cout<<"DIV "<<f->GetTemp()->Id()<<","<<factor->GetTemp()->Id()<<"->"<<n->GetTemp()->Id()<<std::endl;
             return n;
         }
     }
@@ -367,6 +431,10 @@ Parser::~Parser()
    // temp allocator exit 
    Temp::Exit();
     
+   Label::Exit();
+   
+   delete m_label;
+   
    delete m_scanner;
    
    delete m_stack;
@@ -374,6 +442,8 @@ Parser::~Parser()
    delete m_temp;
    
    delete m_const_num;
+   
+   delete m_ir;
 }
     
 }// namespace parser

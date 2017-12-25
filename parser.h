@@ -6,8 +6,12 @@
 #include "symtable.h"
 #include "temp.h"
 #include "const.h"
+#include "label.h"
+
 
 namespace tiger{
+
+class IR;
 
 namespace parser{
 
@@ -279,6 +283,9 @@ class Parser{
 public:
     Parser(scanner::SourceCodeStreamBase* stream);
     s32 Parse();
+    ConstTable* GetConstTable(){return m_const_num;}
+    TempTable*  GetTempTable(){return m_temp;}
+    SymTabStack* GetSymTabStack(){return m_stack;}
     ~Parser();
 private:
     void Init();
@@ -294,10 +301,17 @@ private:
     
     SymTabStack* m_stack;
     
+    /* temp related */
     TempTable* m_temp;
     
-    ConstTableNum* m_const_num;
+    ConstTable* m_const_num;
     ConstTable* m_const_str;
+    
+    /* label related */
+    LabelTable* m_label;
+    
+    /* ir related */
+    IR* m_ir;
 
 };
     

@@ -7,7 +7,8 @@ main.exe:main.c parser.c token.c scanner.c
 	cl /c /TP /EHsc scanner.c
 	cl /c /TP /EHsc token.c
 	cl /c /TP /EHsc temp.c
-	link /subsystem:console main.obj parser.obj scanner.obj token.obj temp.obj /out:main.exe
+	cl /c /TP /EHsc label.c
+	link /subsystem:console main.obj parser.obj scanner.obj token.obj temp.obj label.obj /out:main.exe
 clean:
 	rm main.exe 
 	rm main.obj 
@@ -15,3 +16,4 @@ clean:
 	rm scanner.obj
 	rm token.obj
 	rm temp.obj
+	rm label.obj

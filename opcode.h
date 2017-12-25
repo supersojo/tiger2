@@ -23,6 +23,9 @@
  JMP xx
  RET 
 */
+namespace tiger{
+    
+}// namespace tiger
 
 
 #endif

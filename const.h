@@ -50,7 +50,7 @@ public:
     };
     ConstTable(){m_kind=kConstTable_Invalid;m_tab_hash_size=0;}
     ConstTable(s32 kind){m_kind = kind;m_tab_hash_size=kConstTableHashSize;}
-    s32 Kind(){return m_kind;}
+    virtual s32 Kind(){return m_kind;}
     s32 HashSize(){return m_tab_hash_size;}
 private:
     s32 m_kind;
@@ -116,6 +116,21 @@ public:
         
         return true;
             
+    }
+    bool Dump(){
+        Const* t;
+        for(s32 i=0;i<HashSize();i++){
+            if(m_tab[i]){
+                ConstIter iter(m_tab[i]);
+                for(t=iter.Next();t;t=iter.Next())
+                {
+                    //to be continue
+                    //...
+                    std::cout<<t->GetIdx()<<"---"<<dynamic_cast<TvalNum*>(t->Val())->Data()<<std::endl;
+                }
+            }
+        }
+        return true;
     }
     ~ConstTableNum(){
         for(s32 i=0;i<HashSize();i++)

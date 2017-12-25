@@ -5,6 +5,7 @@
 #include "symtable.h"
 #include "temp.h"
 #include "const.h"
+#include "label.h"
 
 void test_StringSourceCodeStream()
 {
@@ -183,7 +184,7 @@ void test_Next_With_FileSourceCodeStream()
 }
 void test_Parser()
 {
-    tiger::scanner::StringSourceCodeStream stream("a=1{a=2 b=3}b=1 ");
+    tiger::scanner::StringSourceCodeStream stream("a=1+2*3");
     tiger::parser::Parser parser(&stream);
     parser.Parse();
     
@@ -270,6 +271,22 @@ void test_TempTable()
     tiger::Temp::Exit();
     
 }
+void test_Label(){
+    tiger::Label* l;
+    
+    tiger::Label::Init("L",32);
+    
+    l = new tiger::Label;
+    
+    assert(strcmp(l->GetId(),"L0000")==0);
+    
+    tiger::LabelTable tab;
+    tab.Insert(l);
+    
+    assert(tab.Find(l->GetId(),0));
+    
+    tiger::Label::Exit();
+}
 int main()
 {
     //test_StringSourceCodeStream();
@@ -282,5 +299,7 @@ int main()
     //test_Temp();
     //test_Const();
     //test_TempTable();
+    //test_Label();
+    
     return 0;
 }

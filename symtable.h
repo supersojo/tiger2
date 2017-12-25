@@ -179,6 +179,21 @@ public:
         m_table[idx] = n;
         return true;
     }
+    bool Dump(){
+        Symbol* t;
+        for(s32 i=0;i<kSymbolTableSize;i++){
+            if(m_table[i]){
+                SymbolIterator iter(m_table[i]);
+                for(t=iter.Next();t;t=iter.Next())
+                {
+                    //to be continue
+                    //...
+                    std::cout<<t->GetIdx()<<"---"<<t->GetId()<<std::endl;
+                }
+            }
+        }
+        return true;
+    }
     ~SymbolTable(){
         for(s32 i=0;i<kSymbolTableSize;i++)
             FreeSym(m_table[i]);
@@ -211,13 +226,16 @@ private:
 class SymTabNode{
     friend class SymTabStack; 
     friend class SymTabStackIter;
+    friend class IR;
 public:
     SymTabNode(){m_tab = 0; m_next = 0;}
-    SymTabNode(SymbolTable* tab){m_tab = tab;m_next = 0;}
+    SymTabNode(SymbolTable* tab){m_tab = tab;m_next = 0;m_list=0;}
     ~SymTabNode(){delete m_tab;}
 private:
     SymbolTable* m_tab;
     SymTabNode* m_next;
+    
+    SymTabNode* m_list;/* all symbol table in this list, we use it for deleting all symbl table */
 };
 /*
   top
@@ -228,35 +246,65 @@ private:
 */
 class SymTabStack{
     friend class SymTabStackIter;
+    friend class IR;
 public:
-    SymTabStack(){m_top = 0;m_size=0;}
+    SymTabStack(){m_top = 0;m_size=0;m_level=0;m_list=0;}
+    ~SymTabStack(){
+        /* delete all symbol table */
+        SymTabNode* p;
+        p = m_list;
+        while(p){
+            delete p;
+            m_list = m_list->m_list;
+            p = m_list;
+        }
+    }
     SymbolTable* Top(){
         if(m_top)
             return m_top->m_tab;
         else
             return 0;/* no element in stack */
     }
+    SymTabNode* TopNode(){
+        return m_top;
+    }
     void Push(SymbolTable* tab){
         SymTabNode* n = new SymTabNode(tab);
+        
+        /* link to m_list */
+        n->m_list = m_list;;
+        m_list = n;
+        
+        /* link to stack list*/
         n->m_next = m_top;
         m_top = n;
         m_size++;
+        m_level++;
     }
     void Pop(){
         SymTabNode* p = m_top;
         if(m_top){
             m_top = m_top->m_next;
-            m_size--;
-            delete p;
+            m_level--;/* level decrease */
+            
+            /* Don't delete symbol table */
+            //delete p;
         }
     }
     s32 Size(){return m_size;}
+    s32 Level(){return m_level;}
 private:
     SymTabNode* m_top;
-    s32 m_size;
+    s32 m_size;/* meaningless*/
+    s32 m_level;/* stack depth */
+    SymTabNode* m_list;/* refer for all the symbol table, use it to delete all symbol table */
 };
 class SymTabStackIter{
 public:
+    SymTabStackIter(SymTabNode* n){
+        m_next = n;
+        m_orig = n;
+    }
     SymTabStackIter(SymTabStack* stack){
         m_next = stack->m_top;
         m_orig = stack->m_top;
