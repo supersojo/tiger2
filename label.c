@@ -14,6 +14,9 @@ Label::Label(){
     sprintf(Label_Buf,"%s%04d",Label_Prefix,Label_Next_Id);
     m_id = strdup(Label_Buf);
     m_pos = 0;
+    
+    Label_Next_Id++;
+    
 }
 Label::~Label(){
     free(m_id);

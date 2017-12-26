@@ -29,6 +29,13 @@ id=expr|statement
 
 block={statement block}
 
+StatementIf:
+if exp then
+if_body
+
+if_body:
+{statementlist}
+
 */
 
 class Expr;
@@ -226,6 +233,7 @@ public:
     enum{
         kStatement_Assign,
         kStatement_Block,
+        kStatement_If,
         kStatement_Invalid
     };
     Statement(){m_kind = kStatement_Invalid;}
@@ -273,18 +281,30 @@ public:
 private:
     StatementList* m_statementList;
 };
-class Block{
+class StatementIf:public Statement{
 public:
-    Block(){m_list = 0;}
+    StatementIf():Statement(kStatement_If){
+        }
+    StatementIf(Expr* expr,Statement* statement){
+        m_expr = expr;
+        m_statement = statement;
+    }
+    ~StatementIf(){
+        delete m_expr;
+        delete m_statement;
+    }
 private:
-    Statement* m_list;
+    Expr* m_expr;
+    Statement* m_statement;  
 };
+
 class Parser{
 public:
     Parser(scanner::SourceCodeStreamBase* stream);
     s32 Parse();
     ConstTable* GetConstTable(){return m_const_num;}
     TempTable*  GetTempTable(){return m_temp;}
+    LabelTable* GetLabelTable(){return m_label;}
     SymTabStack* GetSymTabStack(){return m_stack;}
     ~Parser();
 private:

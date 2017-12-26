@@ -16,7 +16,8 @@ public:
     enum{
         kIREntry_Operand_Const,
         kIREntry_Operand_Temp,
-        kIREntry_Operand_Sym
+        kIREntry_Operand_Sym,
+        kIREntry_Operand_Label
     };
     IREntry(){
         m_operator = 0;
@@ -84,7 +85,9 @@ public:
     ADD,
     SUB,
     MUL,
-    DIV
+    DIV,
+    CJMP,
+    JMP,
     };
     IR(){m_head=0;m_cur=0;m_len=0;}
     IR(tiger::parser::Parser* parser){m_head=0;m_cur=0;m_len=0;}
@@ -104,6 +107,9 @@ public:
         }
         m_len++;
         return true;
+    }
+    IREntryNode* GetCur(){
+        return m_cur;
     }
     bool Dump(parser::Parser* parser){
         IREntryNode* p;
@@ -131,12 +137,19 @@ private:
         bool ret=false;
         Temp* t;
         Symbol* s;
+        LabelNode* l;
         SymbolTable* tab;
         
         if(operand_from==IREntry::kIREntry_Operand_Temp){
             ret = parser->GetTempTable()->FindByIdx(idx,&t);
             assert(ret);
             return t->Id();
+        }
+        
+        if(operand_from==IREntry::kIREntry_Operand_Label){
+            ret = parser->GetLabelTable()->FindByIdx(idx,&l);
+            assert(ret);
+            return l->GetLabel()->GetId();
         }
         
         assert(operand_from==IREntry::kIREntry_Operand_Sym);
@@ -153,6 +166,7 @@ private:
     }
     bool DumpNode(IREntryNode* p,parser::Parser* parser){
         Const* c;
+        
         switch(p->m_ir->m_operator){
             case CONST:
                 dynamic_cast<ConstTableNum*>(parser->GetConstTable())->FindByIdx(p->m_ir->m_operand1,&c);
@@ -173,6 +187,12 @@ private:
             case DIV:
                 std::cout<<"DIV "<<GetOperandId(p,p->m_ir->m_operand1,p->m_ir->m_operand1_from,parser)<<","<<GetOperandId(p,p->m_ir->m_operand2,p->m_ir->m_operand2_from,parser)<<"->"<<GetOperandId(p,p->m_ir->m_operand3,p->m_ir->m_operand3_from,parser)<<std::endl;
                 break;
+            case CJMP:
+                std::cout<<"CJMP "<<GetOperandId(p,p->m_ir->m_operand1,p->m_ir->m_operand1_from,parser)<<","<<GetOperandId(p,p->m_ir->m_operand2,p->m_ir->m_operand2_from,parser)<<","<<GetOperandId(p,p->m_ir->m_operand3,p->m_ir->m_operand3_from,parser)<<std::endl;
+                break;
+        }
+        if(p->m_label){
+            std::cout<<p->m_label->GetId()<<":"<<std::endl;
         }
         return true;
     }

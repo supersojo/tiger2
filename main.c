@@ -184,7 +184,7 @@ void test_Next_With_FileSourceCodeStream()
 }
 void test_Parser()
 {
-    tiger::scanner::StringSourceCodeStream stream("a=1+2*3");
+    tiger::scanner::StringSourceCodeStream stream("a=1 {c=2} if a b=2+a*c");
     tiger::parser::Parser parser(&stream);
     parser.Parse();
     

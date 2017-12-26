@@ -38,6 +38,8 @@ class LabelNode{
 public:
     LabelNode(){m_label=0;m_next=0;}
     LabelNode(Label* label){m_label=label;m_next=0;}
+    s32 GetIdx(){return m_idx;}
+    Label* GetLabel(){return m_label;}
     ~LabelNode(){delete m_label;}
 private:
     Label*     m_label;
@@ -75,7 +77,7 @@ public:
             m_next_idx[i]=1;/* default from 1 */
         }
     }
-    bool Find(char* label_str,Label**out){
+    bool Find(char* label_str,LabelNode**out){
         LabelNode* lab;
         s32 idx = hash(label_str);
         lab = m_tab[idx];
@@ -83,13 +85,13 @@ public:
         for(lab=iter.Next();lab;lab=iter.Next()){
             if(strcmp(lab->m_label->m_id,label_str)==0){
                 if(out)
-                    *out = lab->m_label;
+                    *out = lab;
                 return true;
             }
         }
         return false;
     }
-    bool FindByIdx(s32 idx,Label** out){
+    bool FindByIdx(s32 idx,LabelNode** out){
         LabelNode* p;
         LabelNode* c = m_tab[idx>>8];
         LabelNodeIter iter(c);
@@ -97,7 +99,7 @@ public:
         {
             if(p->m_idx==idx){
                 if(out)
-                    *out = p->m_label;
+                    *out = p;
                 return true;
             }
         }

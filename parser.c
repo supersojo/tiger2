@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "symtable.h"
 #include "ir.h"
+#include "label.h"
 
 namespace tiger{
 
@@ -71,6 +72,7 @@ Statement* Parser::_ParseStatement()
     Symbol* sym;
     StatementList* statementList;
     SymbolTable* tab;
+    Statement* statement;
     
     v = m_scanner->Next(&t);
     
@@ -127,6 +129,38 @@ Statement* Parser::_ParseStatement()
         
         //std::cout<<"new block statement"<<std::endl;
         return new StatementBlock(statementList);
+    }
+    
+    /* Statement->StatmenIf */
+    if(v==kToken_IF){
+        expr = _ParseExpr();
+        /* new Label
+           GetIr()
+           Ir->Bind(new Label)
+        */
+        Label* label_true = new Label;
+        Label* label_false = new Label;
+        LabelNode* l_true,*l_false;
+        //std::cout<<"new label "<<label_true->GetId()<<std::endl;
+        //std::cout<<"new label "<<label_false->GetId()<<std::endl;
+        
+        m_label->Insert(label_true);
+        m_label->Insert(label_false);
+        
+        m_label->Find(label_true->GetId(),&l_true);
+        m_label->Find(label_false->GetId(),&l_false);
+        
+        m_ir->NewIREntry(IR::CJMP,expr->GetTemp()->GetIdx(),l_true->GetIdx(),l_false->GetIdx(),IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Label,IREntry::kIREntry_Operand_Label,m_stack->TopNode());
+        
+        m_ir->GetCur()->BindLabel(label_true);
+        
+        statement = _ParseStatement();
+
+        m_ir->GetCur()->BindLabel(label_false);
+        
+        //std::cout<<"IF "<<expr->GetTemp()->Id()<<std::endl;
+        return new StatementIf(expr,statement);
+        
     }
     
     // Note: should push back for parsing
