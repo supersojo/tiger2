@@ -3,7 +3,7 @@ a tony compiler for tiger
 
 module list
 -----------
-const.h 
+,const.h 
 实现常量池，目前实现了整数常量池，字符串常量池未实现，对于在池中每个常量都会有一个id标识。常量池使用hash链表实现，标识常量的id高位标识在hash链表的哪条链上，剩下位标识该常量的hash位置。
 
 temp.h
