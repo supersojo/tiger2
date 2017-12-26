@@ -2,12 +2,16 @@
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
 
-#include "tiger_type.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
 
+#include "tiger_type.h"
+
+
 namespace tiger{
+
 
 /*
 ----------------
@@ -34,6 +38,7 @@ public:
     TvalNum():Tval(kTval_Num){m_ival=0;}
     TvalNum(s32 ival):Tval(kTval_Num){m_ival=ival;}
     s32 Data(){return m_ival;}
+    void SetData(s32 v){m_ival=v;}
 private:
     s32 m_ival;
 };
@@ -50,6 +55,7 @@ private:
     char* m_sval;
 };
 
+
 class SymbolIterator;
 
 class Symbol{
@@ -59,7 +65,7 @@ public:
     
     Symbol(char* id){
         m_id = strdup(id);
-        m_val = new Tval;
+        m_val = new TvalNum;
         m_next = 0;
     }
     char* GetId(){return m_id;}
@@ -188,7 +194,10 @@ public:
                 {
                     //to be continue
                     //...
-                    std::cout<<t->GetIdx()<<"---"<<t->GetId()<<std::endl;
+                    if(t->GetVal())
+                        std::cout<<t->GetIdx()<<"---"<<t->GetId()<<"---"<<dynamic_cast<TvalNum*>(t->GetVal())->Data()<<std::endl;
+                    else
+                        std::cout<<t->GetIdx()<<"---"<<t->GetId()<<std::endl;
                 }
             }
         }

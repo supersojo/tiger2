@@ -49,6 +49,7 @@ s32 Parser::Parse()
     
     statementList = _ParseStatementList();
     
+    
     v = m_scanner->Next(&t);
     assert(v==kToken_EOT);
     
@@ -60,6 +61,9 @@ s32 Parser::Parse()
     
     m_stack->Top()->Dump();
     **/
+    
+    //m_stack->Top()->Dump();
+    
     m_ir->Dump(this);
     
     return 0;
@@ -152,15 +156,44 @@ Statement* Parser::_ParseStatement()
         
         m_ir->NewIREntry(IR::CJMP,expr->GetTemp()->GetIdx(),l_true->GetIdx(),l_false->GetIdx(),IREntry::kIREntry_Operand_Temp,IREntry::kIREntry_Operand_Label,IREntry::kIREntry_Operand_Label,m_stack->TopNode());
         
-        m_ir->GetCur()->BindLabel(label_true);
+        m_ir->GetCur()->BindLabel(label_true,IREntryNode::kLabelBindType_After);
         
         statement = _ParseStatement();
 
-        m_ir->GetCur()->BindLabel(label_false);
+        m_ir->GetCur()->BindLabel(label_false,IREntryNode::kLabelBindType_After);
         
         //std::cout<<"IF "<<expr->GetTemp()->Id()<<std::endl;
         return new StatementIf(expr,statement);
         
+    }
+    /* Statement->StatementFunctionDeclaration*/
+    if(v==kToken_FUNCTION){
+        v1 = m_scanner->Next(&t1);
+        
+        assert(v1==kToken_ID);
+        
+        
+        /* function name */
+        
+        
+        v = m_scanner->Next(&t);
+        
+        assert(v==kToken_LPAR);
+        
+        /* ArgList */
+        v = m_scanner->Next(&t);
+        if(v==kToken_RPAR){
+            /* ArgList->empty */
+        }
+        
+        /* function body */
+        statement = _ParseStatement();
+        
+        v = m_scanner->Next(&t);
+        
+        assert(v==kToken_END);
+        
+        return new StatementFunctionDeclaration(t1.u.name,0,statement);
     }
     
     // Note: should push back for parsing

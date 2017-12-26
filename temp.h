@@ -12,6 +12,8 @@
 #include "symtable.h"
 
 namespace tiger{
+class Tval;
+class Symbol;
     
 class Temp{
     friend class TempNode;
@@ -37,6 +39,7 @@ public:
     }
     char* Id(){return m_id;}
     s32 GetIdx(){return m_idx;}
+    Tval* Val(){return m_val;}
     static void Init(char* prefix,int max_len);
     static void Exit();
     ~Temp(){

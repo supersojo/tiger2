@@ -36,6 +36,15 @@ if_body
 if_body:
 {statementlist}
 
+function f(arglist)
+f_body
+end
+
+statmentfuncDes:
+function f_name(arglist)
+{}
+
+end
 */
 
 class Expr;
@@ -234,6 +243,7 @@ public:
         kStatement_Assign,
         kStatement_Block,
         kStatement_If,
+        kStatement_FunctionDeclaration,
         kStatement_Invalid
     };
     Statement(){m_kind = kStatement_Invalid;}
@@ -297,6 +307,35 @@ private:
     Expr* m_expr;
     Statement* m_statement;  
 };
+class ArgList{
+public:
+    ArgList();
+private:
+    char* m_id;
+    ArgList* m_next;
+};
+class StatementFunctionDeclaration:public Statement{
+public:
+    StatementFunctionDeclaration():Statement(kStatement_FunctionDeclaration){
+        m_name=0;
+        m_arg_list=0;
+        m_body=0;
+    }
+    StatementFunctionDeclaration(char* name,ArgList* list,Statement* body){
+        m_name = strdup(name);
+        m_arg_list = list;
+        m_body = body;
+    }
+    ~StatementFunctionDeclaration(){
+        free(m_name);
+        if(m_arg_list) delete m_arg_list;
+        if(m_body) delete m_body;
+    }
+private:
+    char* m_name;
+    ArgList* m_arg_list;
+    Statement* m_body;
+};
 
 class Parser{
 public:
@@ -306,6 +345,7 @@ public:
     TempTable*  GetTempTable(){return m_temp;}
     LabelTable* GetLabelTable(){return m_label;}
     SymTabStack* GetSymTabStack(){return m_stack;}
+    IR* GetIR(){return m_ir;}
     ~Parser();
 private:
     void Init();

@@ -46,6 +46,20 @@ private:
     LabelNode* m_next;
     s32        m_idx;
 };
+class LabelList{
+    friend class IR;
+public:
+    LabelList(){m_label=0;m_next=0;}
+    LabelList(Label* l,LabelList* list,s32 bindtype){m_label=l;m_next=list;m_bindtype=bindtype;}
+    LabelList* GetNext(){return m_next;}
+    Label*     GetLabel(){return m_label;}
+    s32        GetBindtype(){return m_bindtype;}
+    ~LabelList(){}
+private:
+    Label*     m_label;
+    LabelList* m_next;
+    s32        m_bindtype;
+};
 class LabelNodeIter{
 public:
     LabelNodeIter(){m_next=0;m_orig=0;}

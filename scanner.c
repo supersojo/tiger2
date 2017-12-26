@@ -252,6 +252,9 @@ s32 Scanner::Next(Token* t)
     /* = */
     if((char)v=='=')
         return kToken_ASSIGN;
+    /* , */
+    if((char)v==',')
+        return kToken_COMMA;
     
     /* Known token */
     return kToken_Unknown;

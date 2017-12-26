@@ -18,6 +18,7 @@ char * kTokenString[]={
 "kToken_MUL",
 "kToken_DIV",
 "kToken_ASSIGN",
+"kToken_COMMA",
 
 /* keywords */
 "for",

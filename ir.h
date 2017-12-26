@@ -12,6 +12,7 @@ namespace tiger{
 class IREntry{
     friend class IREntryNode;
     friend class IR;
+    friend class VM;
 public:
     enum{
         kIREntry_Operand_Const,
@@ -53,16 +54,25 @@ private:
 
 class IREntryNode{
     friend class IR;
+    friend class VM;
 public:
+    enum{
+        kLabelBindType_Before,
+        kLabelBindType_After,
+        kLabelBindType_Invalid
+    };
     IREntryNode(IREntry* ir){
         m_ir = ir;
         m_label = 0;
         
         m_prev = 0;
         m_next = 0;
+        
+        m_bind_type = kLabelBindType_Invalid;
     }
-    void BindLabel(Label* l){
+    void BindLabel(Label* l,s32 bindtype){
         m_label=l;
+        m_bind_type = bindtype;
     }
     ~IREntryNode(){
         delete m_ir;
@@ -70,6 +80,7 @@ public:
 private:
     IREntry* m_ir;
     Label*   m_label;/* a label binding ?*/
+    s32      m_bind_type;
     
     IREntryNode* m_next;
     IREntryNode* m_prev;
@@ -89,8 +100,8 @@ public:
     CJMP,
     JMP,
     };
-    IR(){m_head=0;m_cur=0;m_len=0;}
-    IR(tiger::parser::Parser* parser){m_head=0;m_cur=0;m_len=0;}
+    IR(){m_head=0;m_cur=0;m_len=0;m_label_list=0;}
+    IR(tiger::parser::Parser* parser){m_head=0;m_cur=0;m_len=0;m_label_list=0;}
     bool NewIREntry(s32 op,s32 o1,s32 o2,s32 o3,s32 o1_f,s32 o2_f,s32 o3_f,SymTabNode* symtab){
         IREntry* e = new IREntry(op,o1,o2,o3,o1_f,o2_f,o3_f);
         IREntryNode* n = new IREntryNode(e);
@@ -106,10 +117,38 @@ public:
             m_cur = n;
         }
         m_len++;
+        
+        
+        /* for binding list */
+        while(m_label_list){
+            LabelList* l;
+            l = m_label_list;
+            m_cur->BindLabel(l->GetLabel(),l->GetBindtype());
+            
+            m_label_list = m_label_list->m_next;
+            
+            //delete l;
+        }
+        
+        m_label_list = 0;
+        
         return true;
     }
     IREntryNode* GetCur(){
         return m_cur;
+    }
+    IREntryNode* GetHead(){
+        return m_head;
+    }
+    bool BindLabel(Label* l,s32 bindtype){
+        LabelList* n;
+        if(m_cur)
+            m_cur->BindLabel(l,bindtype);
+        else{
+            n = new LabelList(l,m_label_list,bindtype);
+            m_label_list = n;
+        }
+        return true;
     }
     bool Dump(parser::Parser* parser){
         IREntryNode* p;
@@ -125,7 +164,8 @@ public:
         do{
             p = m_head;
             
-            m_head = m_head->m_next;
+            if(m_head)
+                m_head = m_head->m_next;
             
             if(p)
                 delete p;
@@ -166,7 +206,8 @@ private:
     }
     bool DumpNode(IREntryNode* p,parser::Parser* parser){
         Const* c;
-        
+        if(p->m_label&&p->m_bind_type==IREntryNode::kLabelBindType_Before)
+            std::cout<<p->m_label->GetId()<<":"<<std::endl;
         switch(p->m_ir->m_operator){
             case CONST:
                 dynamic_cast<ConstTableNum*>(parser->GetConstTable())->FindByIdx(p->m_ir->m_operand1,&c);
@@ -191,7 +232,7 @@ private:
                 std::cout<<"CJMP "<<GetOperandId(p,p->m_ir->m_operand1,p->m_ir->m_operand1_from,parser)<<","<<GetOperandId(p,p->m_ir->m_operand2,p->m_ir->m_operand2_from,parser)<<","<<GetOperandId(p,p->m_ir->m_operand3,p->m_ir->m_operand3_from,parser)<<std::endl;
                 break;
         }
-        if(p->m_label){
+        if(p->m_label&&p->m_bind_type==IREntryNode::kLabelBindType_After){
             std::cout<<p->m_label->GetId()<<":"<<std::endl;
         }
         return true;
@@ -202,6 +243,8 @@ private:
     IREntryNode*  m_cur;
     
     s32 m_len;
+    
+    LabelList* m_label_list;/* when ir's is empty, but we need binding label so record it first then bind them */
     
 };
 
