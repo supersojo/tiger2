@@ -6,6 +6,7 @@
 #include "temp.h"
 #include "const.h"
 #include "label.h"
+#include "vm.h"
 
 void test_StringSourceCodeStream()
 {
@@ -184,7 +185,7 @@ void test_Next_With_FileSourceCodeStream()
 }
 void test_Parser()
 {
-    tiger::scanner::StringSourceCodeStream stream("a=1 {c=2} if a b=2+a*c");
+    tiger::scanner::StringSourceCodeStream stream("a=1 b=2 {c=1 d=3}a=b+3*4");
     tiger::parser::Parser parser(&stream);
     parser.Parse();
     
@@ -287,19 +288,27 @@ void test_Label(){
     
     tiger::Label::Exit();
 }
+void test_VM(){
+    tiger::scanner::StringSourceCodeStream stream("a=1 b=1+2*3 c=a+b");
+    tiger::parser::Parser parser(&stream);
+    parser.Parse();
+    tiger::VM vm(&parser);
+    vm.Run();
+    vm.Dump();
+}
 int main()
 {
     //test_StringSourceCodeStream();
     //test_FileSourceCodeStream();
     //test_Next_With_StringSourceCodeStream();
     //test_Next_With_FileSourceCodeStream();
-    test_Parser();
+    //test_Parser();
     //test_SymbolTable();
     //test_SymTabStack();
     //test_Temp();
     //test_Const();
     //test_TempTable();
     //test_Label();
-    
+    test_VM();
     return 0;
 }
