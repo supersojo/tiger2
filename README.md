@@ -1,5 +1,5 @@
 # tiger2
-a tony compiler for tiger 
+a tiny compiler for tiger language （pascal like）
 
 module list
 -----------
